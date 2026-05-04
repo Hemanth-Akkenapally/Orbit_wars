@@ -4,11 +4,15 @@ Goal: use top-20 replays every day to improve `main.py` with controlled patches.
 
 ## 1. Collect Replays
 
-If Kaggle CLI is installed and `top_submission_ids.txt` has IDs:
+If Kaggle CLI is installed:
 
 ```powershell
 python tools/daily_kaggle_replays.py --competition orbit-wars
 ```
+
+This automatically captures the current top 20 leaderboard into a dated folder.
+Kaggle currently exposes public leaderboard `TeamId` values, while replay download requires `submission_id`.
+The script attempts lookup automatically and writes `DOWNLOAD_REPORT.md` if Kaggle blocks replay discovery.
 
 If you manually download replays, put them in a dated folder, then run:
 
