@@ -1,0 +1,3 @@
+# Add one top submission id per line.
+# The Kaggle CLI can download episodes/replays if we know the submission IDs.
+# Public leaderboard rows may not expose these IDs, so collect them from episode pages when available.
