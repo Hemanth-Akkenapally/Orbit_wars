@@ -40,10 +40,15 @@ def _agent_impl(obs, config=None):
         budgets = {p["id"]: available_ships(p, state) for p in my_planets}
         sources = sorted(my_planets, key=lambda p: budgets[p["id"]], reverse=True)
 
+        action_limit = action_limit_for_turn(state)
+        group_actions = coordinated_group_attack(sources, budgets, state, action_limit)
+        if group_actions:
+            return group_actions
+
         for source in sources:
             if should_hold_for_opening_packet(source, budgets[source["id"]], state):
                 continue
-            while budgets[source["id"]] >= MIN_SEND and len(actions) < MAX_ACTIONS:
+            while budgets[source["id"]] >= MIN_SEND and len(actions) < action_limit:
                 mission = choose_mission(source, budgets[source["id"]], state)
                 if mission is None:
                     break
@@ -57,14 +62,23 @@ def _agent_impl(obs, config=None):
                     and target["production"] >= 2
                     and dist_planets(source, target) < 32
                 ):
-                    ships = budgets[source["id"]]
+                    ships = min(budgets[source["id"]], max(ships + 4, int(target["ships"] + target["production"] * 3)))
+                if should_enforce_opening_packet(source, target, ships, budgets[source["id"]], state):
+                    desired = desired_opening_packet(source, target, state)
+                    if budgets[source["id"]] < desired:
+                        break
+                    ships = max(ships, desired)
                 max_launch = source["ships"] if state["turn"] < 60 else source["ships"] - 1
                 ships = int(max(MIN_SEND, min(ships, budgets[source["id"]], max_launch)))
+                if reason != "rescue" and state["turn"] < 25 and ships < early_attack_floor(state):
+                    break
                 if ships < MIN_SEND:
                     break
 
                 angle = intercept_angle(source, target, ships, state["turn"])
-                angle = avoid_sun_angle(source, target, angle)
+                distance = dist_planets(source, target)
+                if not safe_launch_path(source, angle, distance, state):
+                    break
                 actions.append([source["id"], angle, ships])
                 budgets[source["id"]] -= ships
 
@@ -243,6 +257,82 @@ def available_ships(planet, state):
     return max(0, planet["ships"] - reserve)
 
 
+def coordinated_group_attack(sources, budgets, state, action_limit):
+    if action_limit < 2:
+        return []
+    my_production = sum(p["production"] for p in state["planets"] if p["owner"] == state["me"])
+    if state["turn"] < 45 and my_production < 25:
+        return []
+
+    best = None
+    for target in state["planets"]:
+        if target["owner"] == state["me"]:
+            continue
+        if avoid_early_enemy_attack(target, state):
+            continue
+        if target.get("virtual_attack", 0):
+            continue
+
+        contributors = []
+        max_eta = 1.0
+        for source in sources:
+            budget = budgets.get(source["id"], 0)
+            if budget < MIN_SEND:
+                continue
+            distance = dist_planets(source, target)
+            if distance > 72:
+                continue
+            ships = min(budget, source["ships"] if state["turn"] < 60 else source["ships"] - 1)
+            if ships < MIN_SEND:
+                continue
+            angle = intercept_angle(source, target, ships, state["turn"])
+            if not safe_launch_path(source, angle, distance, state):
+                continue
+            eta = travel_turns(distance, ships)
+            max_eta = max(max_eta, eta)
+            contributors.append((distance, source, ships, angle))
+
+        if len(contributors) < 2:
+            continue
+        future_growth = 0 if target["owner"] in (-1, None) else target["production"] * max_eta
+        needed = int(math.ceil(target["ships"] + future_growth + 3))
+        total_budget = sum(item[2] for item in contributors)
+        if total_budget < needed:
+            continue
+
+        contributors.sort(key=lambda item: item[0])
+        value = target["production"] * 28.0
+        if target["owner"] not in (-1, None):
+            value *= 1.7
+        value += max(0.0, 80.0 - contributors[0][0])
+        value /= max(1.0, needed)
+        if best is None or value > best[0]:
+            best = (value, target, needed, contributors)
+
+    if best is None:
+        return []
+
+    _, target, needed, contributors = best
+    actions = []
+    remaining = needed
+    for _, source, capacity, angle in contributors[:action_limit]:
+        if remaining <= 0:
+            break
+        ships = min(capacity, max(MIN_SEND, remaining))
+        actions.append([source["id"], angle, int(ships)])
+        remaining -= ships
+    return actions if remaining <= 0 and len(actions) >= 2 else []
+
+def action_limit_for_turn(state):
+    my_production = sum(p["production"] for p in state["planets"] if p["owner"] == state["me"])
+    if state["turn"] < 35:
+        return 1
+    if state["turn"] < 75:
+        return 2 if my_production < 25 else 4
+    if state["turn"] < 130:
+        return 4
+    return MAX_ACTIONS
+
 def choose_mission(source, budget, state):
     rescue = best_rescue(source, budget, state)
     if rescue:
@@ -251,6 +341,8 @@ def choose_mission(source, budget, state):
     candidates = []
     for target in state["planets"]:
         if target["id"] == source["id"] or target["owner"] == state["me"]:
+            continue
+        if avoid_early_enemy_attack(target, state):
             continue
         distance = dist_planets(source, target)
         ships = required_attack_ships(source, target, distance, state)
@@ -269,22 +361,63 @@ def choose_mission(source, budget, state):
     _, target, ships = candidates[0]
     return target, ships, "attack"
 
+def avoid_early_enemy_attack(target, state):
+    if target["owner"] in (-1, None, state["me"]):
+        return False
+    my_production = sum(p["production"] for p in state["planets"] if p["owner"] == state["me"])
+    return state["turn"] < 70 and my_production < 30
+def early_attack_floor(state):
+    owned = len([p for p in state["planets"] if p["owner"] == state["me"]])
+    return 10 if owned < 4 else 8
 
-def should_hold_for_opening_packet(source, budget, state):
-    if state["turn"] > 4 or source["production"] < 4 or source["ships"] >= 18:
+
+def should_enforce_opening_packet(source, target, ships, budget, state):
+    if state["turn"] > 15:
+        return False
+    if target["owner"] != -1:
         return False
     if len([p for p in state["planets"] if p["owner"] == state["me"]]) > 1:
         return False
+    return ships < desired_opening_packet(source, target, state)
+
+def should_hold_for_opening_packet(source, budget, state):
+    if state["turn"] > 15:
+        return False
+    if len([p for p in state["planets"] if p["owner"] == state["me"]]) > 1:
+        return False
+    target = best_opening_target(source, state)
+    if target is None:
+        return False
+    desired = desired_opening_packet(source, target, state)
+    return budget < desired
+
+
+def best_opening_target(source, state):
+    best = None
     for target in state["planets"]:
         if target["owner"] != -1:
             continue
         distance = dist_planets(source, target)
-        if distance > 36 or not (6 <= target["ships"] <= 10) or target["production"] < 3:
+        if distance > 62:
             continue
-        ships_soon = source["ships"] + source["production"] * max(0, 5 - state["turn"])
-        if ships_soon >= 18 and budget < 16:
-            return True
-    return False
+        value = target["production"] * 18.0 - target["ships"] * 1.4 - distance * 0.25
+        if target["production"] >= 4:
+            value += 14.0
+        if distance <= 32:
+            value += 8.0
+        if best is None or value > best[0]:
+            best = (value, target)
+    return best[1] if best is not None else None
+
+
+def desired_opening_packet(source, target, state):
+    base = target["ships"] + max(3, int(target["production"] * 2.5))
+    production_floor = 10 + int(source["production"] * 3)
+    if target["production"] >= 4:
+        production_floor += 4
+    if dist_planets(source, target) > 42:
+        production_floor += 4
+    return int(max(base, production_floor))
 
 
 def best_reinforce(source, budget, state):
@@ -389,8 +522,12 @@ def target_score(source, target, ships, distance, state):
         multiplier *= 0.72
     if state["turn"] < 80 and owner in (-1, None):
         multiplier *= 1.65
+        if distance <= 36:
+            multiplier *= 1.25
         if target["ships"] <= source["ships"] - 1:
             multiplier *= 1.35
+    if avoid_early_enemy_attack(target, state):
+        multiplier *= 0.25
     if ships > source["ships"] * 0.65:
         multiplier *= 0.82
 
