@@ -70,7 +70,7 @@ def _agent_impl(obs, config=None):
                     ships = max(ships, desired)
                 max_launch = source["ships"] if state["turn"] < 60 else source["ships"] - 1
                 ships = int(max(MIN_SEND, min(ships, budgets[source["id"]], max_launch)))
-                if reason != "rescue" and state["turn"] < 25 and ships < early_attack_floor(state):
+                if reason != "rescue" and ships < min_packet_for_action(reason, state):
                     break
                 if ships < MIN_SEND:
                     break
@@ -261,12 +261,14 @@ def coordinated_group_attack(sources, budgets, state, action_limit):
     if action_limit < 2:
         return []
     my_production = sum(p["production"] for p in state["planets"] if p["owner"] == state["me"])
-    if state["turn"] < 45 and my_production < 25:
+    if state["turn"] < 80 or my_production < 40:
         return []
 
     best = None
     for target in state["planets"]:
         if target["owner"] == state["me"]:
+            continue
+        if target["production"] < 4:
             continue
         if avoid_early_enemy_attack(target, state):
             continue
@@ -277,13 +279,13 @@ def coordinated_group_attack(sources, budgets, state, action_limit):
         max_eta = 1.0
         for source in sources:
             budget = budgets.get(source["id"], 0)
-            if budget < MIN_SEND:
+            if budget < coordinated_min_packet(state):
                 continue
             distance = dist_planets(source, target)
             if distance > 72:
                 continue
             ships = min(budget, source["ships"] if state["turn"] < 60 else source["ships"] - 1)
-            if ships < MIN_SEND:
+            if ships < coordinated_min_packet(state):
                 continue
             angle = intercept_angle(source, target, ships, state["turn"])
             if not safe_launch_path(source, angle, distance, state):
@@ -315,10 +317,10 @@ def coordinated_group_attack(sources, budgets, state, action_limit):
     _, target, needed, contributors = best
     actions = []
     remaining = needed
-    for _, source, capacity, angle in contributors[:action_limit]:
+    for _, source, capacity, angle in contributors[:min(action_limit, 3)]:
         if remaining <= 0:
             break
-        ships = min(capacity, max(MIN_SEND, remaining))
+        ships = min(capacity, max(coordinated_min_packet(state), remaining))
         actions.append([source["id"], angle, int(ships)])
         remaining -= ships
     return actions if remaining <= 0 and len(actions) >= 2 else []
@@ -328,9 +330,9 @@ def action_limit_for_turn(state):
     if state["turn"] < 35:
         return 1
     if state["turn"] < 75:
-        return 2 if my_production < 25 else 4
+        return 2 if my_production >= 25 else 1
     if state["turn"] < 130:
-        return 4
+        return 3 if my_production >= 45 else 2
     return MAX_ACTIONS
 
 def choose_mission(source, budget, state):
@@ -366,6 +368,22 @@ def avoid_early_enemy_attack(target, state):
         return False
     my_production = sum(p["production"] for p in state["planets"] if p["owner"] == state["me"])
     return state["turn"] < 70 and my_production < 30
+def coordinated_min_packet(state):
+    return 12 if state["turn"] < 130 else 10
+
+
+def min_packet_for_action(reason, state):
+    if reason == "rescue":
+        return MIN_SEND
+    if state["turn"] < 25:
+        return early_attack_floor(state)
+    if state["turn"] < 80:
+        return 10
+    if state["turn"] < 140:
+        return 8
+    return MIN_SEND
+
+
 def early_attack_floor(state):
     owned = len([p for p in state["planets"] if p["owner"] == state["me"]])
     return 10 if owned < 4 else 8
