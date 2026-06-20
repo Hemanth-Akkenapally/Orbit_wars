@@ -1,0 +1,4 @@
+Evening automation changes on 2026-05-15:
+- Added cross-turn memory for our pending attack launches so early moving-target fleets are not re-issued every few turns.
+- Held the one-planet opener while an early expansion fleet is still pending.
+- Reduced low-economy 4P action volume to curb packet spam before production is established.

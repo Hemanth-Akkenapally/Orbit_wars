@@ -308,13 +308,13 @@ def action_limit_for_turn(state):
 
 
 def available_ships(planet, state):
-    reserve = 0 if state["turn"] < 75 else 1
-    if planet["production"] >= 4 and state["turn"] >= 35:
+    reserve = 1
+    if planet["production"] >= 4:
         reserve += 1
-    if state["crowded"] and 45 <= state["turn"] < 95 and planet["production"] >= 4:
+    if state["crowded"] and state["turn"] < 90 and planet["production"] >= 3:
         reserve += 1
     if state["turn"] > 120:
-        reserve += int(planet["ships"] * (0.06 if not state["crowded"] else 0.10))
+        reserve += int(planet["ships"] * (0.08 if not state["crowded"] else 0.12))
 
     incoming_enemy = 0
     incoming_friend = int(planet.get("virtual_reinforce", 0))
@@ -351,8 +351,7 @@ def best_neutral_capture(source, budget, state):
         if solution is None:
             continue
         score = neutral_score(source, target, ships, eta, distance, state)
-        threshold = neutral_score_threshold(target, state)
-        if score <= threshold:
+        if score <= 0:
             continue
         if best is None or score > best[0]:
             best = (score, target, ships)
@@ -378,8 +377,7 @@ def best_enemy_attack(source, budget, state):
         if solution is None:
             continue
         score = enemy_score(source, target, ships, eta, distance, state)
-        threshold = neutral_score_threshold(target, state)
-        if score <= threshold:
+        if score <= 0:
             continue
         if best is None or score > best[0]:
             best = (score, target, ships)
@@ -534,35 +532,23 @@ def neutral_score(source, target, ships, eta, distance, state):
     remaining = max(25.0, state["episode_steps"] - state["turn"] - eta)
     value = target["production"] * remaining
     if target["production"] >= 5:
-        value += 360
+        value += 260
     elif target["production"] == 4:
-        value += 250
+        value += 180
     elif target["production"] == 3:
-        value += 125
-    elif target["production"] == 2 and distance <= 34:
-        value += 45
+        value += 80
     if distance <= 24:
-        value += 110
-    elif distance <= 38:
-        value += 60
+        value += 90
+    elif distance <= 36:
+        value += 45
     if source["production"] >= 4:
-        value += 55
-    if source["production"] >= 3 and target["production"] >= 3:
         value += 35
     if target["comet"]:
         value *= 0.72
-    if state["crowded"] and state["turn"] < 80:
-        value += 80 if target["production"] >= 4 and distance <= 44 else 0
-    cost = ships * 14.0 + eta * 4.0 + distance * 1.45
+    if state["crowded"] and state["turn"] < 70:
+        value += 60 if target["production"] >= 4 and distance <= 36 else 0
+    cost = ships * 18.0 + eta * 5.0 + distance * 2.0
     return value - cost
-
-
-def neutral_score_threshold(target, state):
-    if target["production"] >= 4 and state["turn"] < 90:
-        return -90.0
-    if target["production"] == 3 and state["turn"] < 70:
-        return -35.0
-    return 0.0
 
 
 def enemy_score(source, target, ships, eta, distance, state):
@@ -583,30 +569,23 @@ def enemy_score(source, target, ships, eta, distance, state):
 
 def neutral_distance_ok(source, target, distance, state):
     if target["production"] >= 4:
-        cap = 78 if not state["crowded"] else 64
-    elif target["production"] == 3:
         cap = 64 if not state["crowded"] else 52
-    elif target["production"] == 2:
+    elif target["production"] == 3:
         cap = 52 if not state["crowded"] else 42
+    elif target["production"] == 2:
+        cap = 40 if not state["crowded"] else 30
     else:
-        cap = 28
-    if source["production"] >= 4:
-        cap += 8
+        cap = 24
     if state["turn"] < 22:
-        if target["production"] >= 4:
-            cap = min(cap, 58)
-        elif target["production"] == 3:
-            cap = min(cap, 46)
-        else:
-            cap = min(cap, 36)
+        cap = min(cap, 44 if target["production"] >= 4 else 34)
     return distance <= cap
 
 
 def enemy_attack_allowed(state):
     turn = state["turn"]
     if state["crowded"]:
-        return turn >= 82 and (my_production(state) >= 28 or my_planet_count(state) >= 8)
-    return turn >= 30 and (my_production(state) >= 12 or my_planet_count(state) >= 3)
+        return turn >= 75 and (my_production(state) >= 30 or my_planet_count(state) >= 7)
+    return turn >= 38 and (my_production(state) >= 14 or my_planet_count(state) >= 4)
 
 
 def attack_distance_cap(target, state):
@@ -687,13 +666,13 @@ def valid_shot(source, target, angle, eta, state):
     sx = source["x"] + math.cos(angle) * (source["radius"] + 0.2)
     sy = source["y"] + math.sin(angle) * (source["radius"] + 0.2)
     tx, ty = planet_position(target, eta)
-    sun_clearance = state.get("sun_radius", SUN_RADIUS) + 0.35
+    sun_clearance = state.get("sun_radius", SUN_RADIUS) + 0.65
     if distance_point_to_segment(CENTER_X, CENTER_Y, sx, sy, tx, ty) <= sun_clearance:
         return False
     if not (0.0 <= tx <= 100.0 and 0.0 <= ty <= 100.0):
         return False
     miss = distance_point_to_segment(tx, ty, sx, sy, sx + math.cos(angle) * 160.0, sy + math.sin(angle) * 160.0)
-    return miss <= target["radius"] + 0.75
+    return miss <= target["radius"] + 0.35
 
 
 def planet_position(planet, turn_delta):
@@ -737,13 +716,13 @@ def mark_bad_target(target, ships):
 
 def committed_to_target(target_id, state, owner):
     total = 0
-    owner_filter = state["me"] if owner is None else owner
     for item in pending_launches(state):
-        if item["target"] == target_id and owner_filter == state["me"]:
+        if item["target"] == target_id and (owner is None or state["me"] == owner):
             total += int(item["ships"])
     for fleet in state["fleets"]:
-        if fleet["target"] == target_id and fleet["owner"] == owner_filter:
-            total += int(fleet["ships"])
+        if fleet["target"] == target_id and (owner is None or fleet["owner"] == owner):
+            if owner is None or fleet["owner"] == state["me"]:
+                total += int(fleet["ships"])
     return total
 
 

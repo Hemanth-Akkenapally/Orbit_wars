@@ -1,0 +1,3 @@
+Morning automation changes on 2026-05-16:
+- Fixed moving-planet intercept ETA with an iterative solve so fleets aim at the target's actual future position instead of a one-shot estimate.
+- Stored pending launch ETA with the same intercept solver so cross-turn launch memory expires on a more accurate schedule.

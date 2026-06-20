@@ -1,0 +1,3 @@
+- Added crowded-game attack gate to skip low-production and long-distance 4P attacks after the opening.
+- Kept reinforce fallback alive longer in crowded games and widened its early crowded distance window.
+- Tightened crowded-game action caps and raised crowded attack packet floors to cut low-conversion spam.
