@@ -1,4 +1,4 @@
-"""Daily Orbit Wars replay collection helper.
+"""Daily BioHub_Project replay collection helper.
 
 This script automates the parts the Kaggle CLI exposes. The public leaderboard
 does not always expose submission IDs, so keep a text file of known top
@@ -27,7 +27,7 @@ from pathlib import Path
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--competition", default="orbit-wars")
+    parser.add_argument("--competition", default="biohub-cell-tracking-during-development")
     parser.add_argument("--out-root", default="daily_runs")
     parser.add_argument("--date", default=dt.date.today().isoformat())
     parser.add_argument("--submission-ids", default="top_submission_ids.txt")
@@ -197,7 +197,7 @@ def parse_kaggle_url(url):
 
 def write_report(out, leaderboard_rows, attempts, episode_ids, replay_attempts):
     lines = [
-        "# Daily Orbit Wars Replay Download",
+        "# Daily BioHub_Project Replay Download",
         "",
         f"Top leaderboard rows captured: {len(leaderboard_rows)}",
         f"Episodes discovered: {len(set(episode_ids))}",

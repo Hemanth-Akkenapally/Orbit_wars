@@ -1,4 +1,4 @@
-# Daily Orbit Wars Workflow
+# Daily BioHub_Project Workflow
 
 Goal: use top-20 replays every day to improve `main.py` with controlled patches.
 
@@ -7,7 +7,7 @@ Goal: use top-20 replays every day to improve `main.py` with controlled patches.
 If Kaggle CLI is installed:
 
 ```powershell
-python tools/daily_kaggle_replays.py --competition orbit-wars
+python tools/daily_kaggle_replays.py --competition biohub-cell-tracking-during-development
 ```
 
 This automatically captures the current top 20 leaderboard into a dated folder.
@@ -17,7 +17,7 @@ The script attempts lookup automatically and writes `DOWNLOAD_REPORT.md` if Kagg
 If you manually download replays, put them in a dated folder, then run:
 
 ```powershell
-python tools/replay_miner.py "C:\Users\akken\Desktop\Deep_learning\Orbit_wars\May_3\Top_replays" --out daily_runs\2026-05-03\summary
+python tools/replay_miner.py "C:\Users\akken\Desktop\Deep_learning\BioHub_Project\May_3\Top_replays" --out daily_runs\2026-05-03\summary
 ```
 
 ## 2. Read The Summary
@@ -53,7 +53,7 @@ Patch only one behavior per submission:
 ## 4. Submit
 
 ```powershell
-kaggle competitions submit -c orbit-wars -f main.py -m "short version note"
+kaggle competitions submit -c biohub-cell-tracking-during-development -f main.py -m "short version note"
 ```
 
 ## 5. Bring Back Results

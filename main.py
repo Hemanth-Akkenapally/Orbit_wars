@@ -1,4 +1,4 @@
-"""Zero-base Orbit Wars agent.
+"""BioHub_Project baseline agent.
 
 The strategy is intentionally explicit:
 1. grow production with exact neutral captures,

@@ -1,6 +1,9 @@
-# Orbit Wars: Getting Started
+# BioHub_Project: Getting Started
 
-This guide walks you through building an agent, testing it locally, and submitting it to the Orbit Wars competition on Kaggle.
+This project is now focused on the Kaggle BioHub Cell Tracking During Development competition:
+https://www.kaggle.com/competitions/biohub-cell-tracking-during-development
+
+The notes below are legacy Orbit Wars setup details kept temporarily while the project is being repurposed.
 
 ## Game Overview
 
@@ -112,20 +115,20 @@ Alternative auth methods:
 Verify the CLI is wired up:
 
 ```bash
-kaggle competitions list -s "orbit wars"
+kaggle competitions list -s "biohub cell tracking during development"
 ```
 
 ## Find the Competition
 
 ```bash
-kaggle competitions list -s "orbit wars"
-kaggle competitions pages orbit-wars
-kaggle competitions pages orbit-wars --content
+kaggle competitions list -s "biohub cell tracking during development"
+kaggle competitions pages biohub-cell-tracking-during-development
+kaggle competitions pages biohub-cell-tracking-during-development --content
 ```
 
 ## Accept the Competition Rules
 
-Before submitting, you **must** accept the rules on the Kaggle website. Navigate to `https://www.kaggle.com/competitions/orbit-wars` and click **"Join Competition"**.
+Before submitting, you **must** accept the rules on the Kaggle website. Navigate to `https://www.kaggle.com/competitions/biohub-cell-tracking-during-development` and click **"Join Competition"**.
 
 Verify you've joined:
 
@@ -136,7 +139,7 @@ kaggle competitions list --group entered
 ## Download Competition Data
 
 ```bash
-kaggle competitions download orbit-wars -p orbit-wars-data
+kaggle competitions download biohub-cell-tracking-during-development -p biohub-cell-tracking-during-development-data
 ```
 
 ## Submit Your Agent
@@ -146,20 +149,20 @@ Your submission must have a `main.py` at the root with an `agent` function.
 **Single file agent:**
 
 ```bash
-kaggle competitions submit orbit-wars -f main.py -m "Nearest planet sniper v1"
+kaggle competitions submit biohub-cell-tracking-during-development -f main.py -m "BioHub_Project v1"
 ```
 
 **Multi-file agent** — bundle into a tar.gz with `main.py` at the root:
 
 ```bash
 tar -czf submission.tar.gz main.py helper.py model_weights.pkl
-kaggle competitions submit orbit-wars -f submission.tar.gz -m "Multi-file agent v1"
+kaggle competitions submit biohub-cell-tracking-during-development -f submission.tar.gz -m "BioHub_Project multi-file v1"
 ```
 
 **Notebook submission:**
 
 ```bash
-kaggle competitions submit orbit-wars -k YOUR_USERNAME/orbit-wars-agent -f submission.tar.gz -v 1 -m "Notebook agent v1"
+kaggle competitions submit biohub-cell-tracking-during-development -k YOUR_USERNAME/biohub-project -f submission.tar.gz -v 1 -m "BioHub_Project notebook v1"
 ```
 
 ## Monitor Your Submission
@@ -167,7 +170,7 @@ kaggle competitions submit orbit-wars -k YOUR_USERNAME/orbit-wars-agent -f submi
 Check submission status:
 
 ```bash
-kaggle competitions submissions orbit-wars
+kaggle competitions submissions biohub-cell-tracking-during-development
 ```
 
 Note the submission ID from the output — you'll need it for episodes.
@@ -208,7 +211,7 @@ kaggle competitions logs <EPISODE_ID> 1 -p ./logs
 ## Check the Leaderboard
 
 ```bash
-kaggle competitions leaderboard orbit-wars -s
+kaggle competitions leaderboard biohub-cell-tracking-during-development -s
 ```
 
 ## Typical Workflow
@@ -223,10 +226,10 @@ print([(i, s.reward) for i, s in enumerate(env.steps[-1])])
 "
 
 # Submit
-kaggle competitions submit orbit-wars -f main.py -m "v1"
+kaggle competitions submit biohub-cell-tracking-during-development -f main.py -m "v1"
 
 # Check status
-kaggle competitions submissions orbit-wars
+kaggle competitions submissions biohub-cell-tracking-during-development
 
 # Review episodes
 kaggle competitions episodes <SUBMISSION_ID>
@@ -236,5 +239,5 @@ kaggle competitions replay <EPISODE_ID>
 kaggle competitions logs <EPISODE_ID> 0
 
 # Check leaderboard
-kaggle competitions leaderboard orbit-wars -s
+kaggle competitions leaderboard biohub-cell-tracking-during-development -s
 ```

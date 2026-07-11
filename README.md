@@ -1,4 +1,9 @@
-# Orbit Wars
+# BioHub_Project
+
+Project workspace for the Kaggle BioHub Cell Tracking During Development competition:
+https://www.kaggle.com/competitions/biohub-cell-tracking-during-development
+
+## Legacy Orbit Wars Notes
 
 Conquer planets rotating around a sun in continuous 2D space. A real-time strategy game for 2 or 4 players.
 

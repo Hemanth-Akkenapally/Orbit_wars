@@ -1,4 +1,4 @@
-"""Mine Orbit Wars replay JSON files for daily strategy notes.
+"""Mine BioHub_Project replay JSON files for daily strategy notes.
 
 This script is intentionally dependency-free. It summarizes replays you already
 downloaded and extracts the opening patterns we care about most:
@@ -192,7 +192,7 @@ def write_csv(path, rows):
 
 
 def write_markdown(path, replay_rows, checkpoint_rows, opening_rows):
-    lines = ["# Orbit Wars Replay Summary", ""]
+    lines = ["# BioHub_Project Replay Summary", ""]
     lines.append(f"Replays analyzed: {len(replay_rows)}")
     lines.append("")
     lines.append("## Winners")
